@@ -77,3 +77,21 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+postgresql:
+  enabled: true
+
+gogs:
+  enabled: true
+  hostname: gogs-demo-helm.apps.ocp4-demo-cluster-01.hetzner.clustership.com
+
+tags:
+  front-end: false
+  backend: true
+
+global:
+  gogs:
+    hostname: gogs-demo-helm.apps.ocp4-demo-cluster-01.hetzner.clustership.com
+  postgresql:
+    postgresqlUsername: gogs
+    postgresqlPassword: gogslebponge616

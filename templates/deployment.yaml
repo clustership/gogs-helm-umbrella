@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "gogs-full.fullname" . }}
+  name: {{ include "gogs.fullname" . }}-pgproxy
   labels:
-    {{- include "gogs-full.labels" . | nindent 4 }}
+    {{- include "gogs.labels" . | nindent 4 }}
 spec:
 {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
 {{- end }}
   selector:
     matchLabels:
-      {{- include "gogs-full.selectorLabels" . | nindent 6 }}
+      {{- include "gogs.selectorLabels" . | nindent 6 }}
   template:
     metadata:
     {{- with .Values.podAnnotations }}
@@ -18,35 +18,48 @@ spec:
         {{- toYaml . | nindent 8 }}
     {{- end }}
       labels:
-        {{- include "gogs-full.selectorLabels" . | nindent 8 }}
+        {{- include "gogs.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "gogs-full.serviceAccountName" . }}
+      serviceAccountName: {{ include "gogs.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        - name: {{ .Chart.Name }}
+        - name: pg-haproxy
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: quay.io/xymox/pg-haproxy:0.1
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - name: http
-              containerPort: 80
+            - name: {{ .Values.service.port }}-http
+              containerPort: {{ .Values.service.port }}
               protocol: TCP
           livenessProbe:
             httpGet:
               path: /
-              port: http
+              port: {{ .Values.service.port }}-http
+              scheme: HTTP
+            initialDelaySeconds: 40
+            timeoutSeconds: 1
+            periodSeconds: 20
+            successThreshold: 1
+            failureThreshold: 10
           readinessProbe:
             httpGet:
               path: /
-              port: http
+              port: {{ .Values.service.port }}-http
+              scheme: HTTP
+            initialDelaySeconds: 40
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 10
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          terminationMessagePath: /dev/termination-log
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
